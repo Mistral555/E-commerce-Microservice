@@ -1,21 +1,12 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const communicator = require('../communicator/index'); // Update with correct path
+const { sequelize, User } = require('../db.js');
 const app = express();
 const PORT = process.env.PORT || 3006;
 
 // Middleware to parse JSON requests
 app.use(express.json());
-
-// Mock user database
-const users = [
-  {
-    id: 1,
-    username: 'user1',
-    password: bcrypt.hashSync('password123', 10), // Pre-hashed password
-  }
-];
 
 // Secret key for JWT
 const SECRET_KEY = 'your_secret_key';
@@ -28,24 +19,20 @@ app.post('/api/auth/register', async (req, res) => {
     return res.status(400).json({ error: 'Username and password are required' });
   }
 
-  const existingUser = users.find(user => user.username === username);
-  if (existingUser) {
-    return res.status(409).json({ error: 'Username already exists' });
-  }
-
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const newUser = { id: users.length + 1, username, password: hashedPassword };
-  users.push(newUser);
-
-  // Synchronize with User Service
   try {
-    await communicator.createUser({ username });
-  } catch (err) {
-    console.error('Error syncing with User Service:', err.message);
-    return res.status(500).json({ error: 'Failed to synchronize user with User Service' });
-  }
+    const existingUser = await User.findOne({ where: { username } });
+    if (existingUser) {
+      return res.status(409).json({ error: 'Username already exists' });
+    }
 
-  res.status(201).json({ message: 'User registered successfully', user: { id: newUser.id, username: newUser.username } });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = await User.create({ username, password: hashedPassword });
+
+    res.status(201).json({ message: 'User registered successfully', user: { id: newUser.id, username: newUser.username } });
+  } catch (err) {
+    console.error('Error registering user:', err.message);
+    res.status(500).json({ error: 'Failed to register user' });
+  }
 });
 
 // Endpoint to login
@@ -56,27 +43,23 @@ app.post('/api/auth/login', async (req, res) => {
     return res.status(400).json({ error: 'Username and password are required' });
   }
 
-  // Validate user with User Service
-  let user;
   try {
-    const response = await communicator.getUsers();
-    user = response.users.find(u => u.username === username);
+    const user = await User.findOne({ where: { username } });
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    const token = jwt.sign({ userId: user.id, username: user.username }, SECRET_KEY, { expiresIn: '1h' });
+    res.json({ message: 'Login successful', token });
   } catch (err) {
-    console.error('Error fetching users from User Service:', err.message);
-    return res.status(500).json({ error: 'Failed to validate user with User Service' });
+    console.error('Error logging in:', err.message);
+    res.status(500).json({ error: 'Failed to login' });
   }
-
-  if (!user) {
-    return res.status(401).json({ error: 'Invalid username or password' });
-  }
-
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-  if (!isPasswordValid) {
-    return res.status(401).json({ error: 'Invalid username or password' });
-  }
-
-  const token = jwt.sign({ userId: user.id, username: user.username }, SECRET_KEY, { expiresIn: '1h' });
-  res.json({ message: 'Login successful', token });
 });
 
 // Endpoint to verify the JWT

@@ -18,34 +18,26 @@ app.use((req, res, next) => {
 
 // Service Routes
 const services = {
-  users: 'http://localhost:3001',
-  stores: 'http://localhost:3002',
-  products: 'http://localhost:3003',
-  orders: 'http://localhost:3004',
-  carts: 'http://localhost:3005',
-  auth: 'http://localhost:3006',
+  users: 'http://localhost:3001/api',
+  stores: 'http://localhost:3002/api',
+  products: 'http://localhost:3003/api',
+  orders: 'http://localhost:3004/api',
+  carts: 'http://localhost:3005/api',
+  auth: 'http://localhost:3006/api',
 };
 
 // Proxy Requests to Microservices
-// Object.entries(services).forEach(([serviceName, serviceUrl]) => {
-//     app.use((req, res, next) => {
-//         console.log(`Incoming request: ${req.method} ${req.url}`);
-//         next();
-//       });
-//   app.use(
-//     `/api/${serviceName}`,
-//     createProxyMiddleware({
-//       target: serviceUrl,
-//       changeOrigin: true,
-//      // pathRewrite: { [`^/api/${serviceName}`]: '' }, // Remove the base path
-//     })
-//   );
-// });
+Object.entries(services).forEach(([serviceName, serviceUrl]) => {
+  app.get(
+    `/${serviceName}`,
+    createProxyMiddleware({
+      target: serviceUrl,
+      changeOrigin: true,
+    })
+  );
+});
 
-app.get('/api/users', createProxyMiddleware({
-  target: 'http://localhost:3001', // URL du service d'authentification
-  changeOrigin: true,
-}));
+
 
 // Health Check Route
 app.get('/api/health', (req, res) => {

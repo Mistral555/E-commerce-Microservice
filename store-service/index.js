@@ -1,27 +1,21 @@
 const express = require('express');
-const communicator = require('../communicator/index'); // Update with correct path
+const { sequelize, Store, StoreProduct, Product } = require('../db.js');
+const communicator = require('../communicator/index');
 const app = express();
 const PORT = process.env.PORT || 3002;
 
 // Middleware to parse JSON requests
 app.use(express.json());
 
-// Mock database for stores and products
-const stores = [
-  {
-    id: 1,
-    name: 'Xiaomi',
-    user_prop: 4,
-    products: [
-      { id: 1, name: 'Product A', price: 20, quantity: 600 },
-      { id: 2, name: 'Product B', price: 50, quantity: 300 }
-    ]
-  }
-];
-
 // Get all stores
-app.get('/api/stores', (req, res) => {
-  res.json({ stores });
+app.get('/api/stores', async (req, res) => {
+  try {
+    const stores = await Store.findAll();
+    res.json({ stores });
+  } catch (err) {
+    console.error('Error fetching stores:', err.message);
+    res.status(500).json({ error: 'Failed to fetch stores' });
+  }
 });
 
 // Get a store by ID
@@ -29,7 +23,14 @@ app.get('/api/stores/:id', async (req, res) => {
   const storeId = parseInt(req.params.id);
 
   try {
-    const store = stores.find(store => store.id === storeId);
+    const store = await Store.findByPk(storeId, {
+      include: [
+        {
+          model: StoreProduct,
+          include: [Product]
+        }
+      ]
+    });
     if (store) {
       res.json({ store });
     } else {
@@ -43,24 +44,14 @@ app.get('/api/stores/:id', async (req, res) => {
 
 // Add a new store
 app.post('/api/stores', async (req, res) => {
-  const { name, user_prop, products } = req.body;
+  const { name, user_prop } = req.body;
 
   if (!name || !user_prop) {
     return res.status(400).json({ error: 'Name and user_prop are required' });
   }
 
   try {
-    const newStore = {
-      id: stores.length + 1,
-      name,
-      user_prop,
-      products: products || []
-    };
-    stores.push(newStore);
-
-    // Notify other services about the new store if needed
-    await communicator.notifyNewStore(newStore);
-
+    const newStore = await Store.create({ name, user_prop });
     res.status(201).json({ message: 'Store added successfully', store: newStore });
   } catch (err) {
     console.error('Error adding store:', err.message);
@@ -71,10 +62,10 @@ app.post('/api/stores', async (req, res) => {
 // Update a store
 app.put('/api/stores/:id', async (req, res) => {
   const storeId = parseInt(req.params.id);
-  const { name, user_prop, products } = req.body;
+  const { name, user_prop } = req.body;
 
   try {
-    const store = stores.find(store => store.id === storeId);
+    const store = await Store.findByPk(storeId);
 
     if (!store) {
       return res.status(404).json({ error: 'Store not found' });
@@ -82,8 +73,8 @@ app.put('/api/stores/:id', async (req, res) => {
 
     if (name) store.name = name;
     if (user_prop) store.user_prop = user_prop;
-    if (products) store.products = products;
 
+    await store.save();
     res.json({ message: 'Store updated successfully', store });
   } catch (err) {
     console.error('Error updating store:', err.message);
@@ -96,17 +87,13 @@ app.delete('/api/stores/:id', async (req, res) => {
   const storeId = parseInt(req.params.id);
 
   try {
-    const storeIndex = stores.findIndex(store => store.id === storeId);
+    const store = await Store.findByPk(storeId);
 
-    if (storeIndex === -1) {
+    if (!store) {
       return res.status(404).json({ error: 'Store not found' });
     }
 
-    const removedStore = stores.splice(storeIndex, 1);
-
-    // Notify other services about the removed store if needed
-    await communicator.notifyStoreRemoval(removedStore);
-
+    await store.destroy();
     res.json({ message: 'Store deleted successfully' });
   } catch (err) {
     console.error('Error deleting store:', err.message);
@@ -119,13 +106,12 @@ app.get('/api/stores/:id/products', async (req, res) => {
   const storeId = parseInt(req.params.id);
 
   try {
-    const store = stores.find(store => store.id === storeId);
+    const products = await StoreProduct.findAll({
+      where: { storeId },
+      include: [Product]
+    });
 
-    if (store) {
-      res.json({ products: store.products });
-    } else {
-      res.status(404).json({ error: 'Store not found' });
-    }
+    res.json({ products });
   } catch (err) {
     console.error('Error fetching products:', err.message);
     res.status(500).json({ error: 'Failed to fetch products' });
@@ -135,26 +121,25 @@ app.get('/api/stores/:id/products', async (req, res) => {
 // Add a product to a store
 app.post('/api/stores/:id/products', async (req, res) => {
   const storeId = parseInt(req.params.id);
-  const { name, price, quantity } = req.body;
+  const { productId, price, quantity } = req.body;
 
   try {
-    const store = stores.find(store => store.id === storeId);
+    const store = await Store.findByPk(storeId);
 
     if (!store) {
       return res.status(404).json({ error: 'Store not found' });
     }
 
-    if (!name || !price || !quantity) {
-      return res.status(400).json({ error: 'Name, price, and quantity are required' });
+    if (!productId || !price || !quantity) {
+      return res.status(400).json({ error: 'ProductId, price, and quantity are required' });
     }
 
-    const newProduct = {
-      id: store.products.length + 1,
-      name,
+    const newProduct = await StoreProduct.create({
+      storeId,
+      productId,
       price,
       quantity
-    };
-    store.products.push(newProduct);
+    });
 
     res.status(201).json({ message: 'Product added successfully', product: newProduct });
   } catch (err) {
@@ -165,23 +150,18 @@ app.post('/api/stores/:id/products', async (req, res) => {
 
 // Delete a product from a store
 app.delete('/api/stores/:storeId/products/:productId', async (req, res) => {
-  const storeId = parseInt(req.params.storeId);
-  const productId = parseInt(req.params.productId);
+  const { storeId, productId } = req.params;
 
   try {
-    const store = stores.find(store => store.id === storeId);
+    const product = await StoreProduct.findOne({
+      where: { storeId, productId }
+    });
 
-    if (!store) {
-      return res.status(404).json({ error: 'Store not found' });
-    }
-
-    const productIndex = store.products.findIndex(product => product.id === productId);
-
-    if (productIndex === -1) {
+    if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    store.products.splice(productIndex, 1);
+    await product.destroy();
 
     res.json({ message: 'Product deleted successfully' });
   } catch (err) {

@@ -1,109 +1,94 @@
 const express = require('express');
-const communicator = require('../communicator/index'); // Update with correct path
+const { sequelize, Cart, CartItem } = require('../db.js');
+const communicator = require('../communicator/index');
 const app = express();
 const PORT = process.env.PORT || 3005;
 
 app.use(express.json());
 
-const carts = [
-  {
-    id: 1,
-    user_id: 1,
-    items: [
-      { id: 1, product_id: 1, quantity: 2 },
-      { id: 2, product_id: 2, quantity: 1 }
-    ]
-  }
-];
-
+// Get a user's cart
 app.get('/api/carts/:user_id', async (req, res) => {
   const userId = parseInt(req.params.user_id);
 
-  // Validate user existence via User Service
   try {
-    const user = await communicator.getUserById(userId);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+    const cart = await Cart.findOne({
+      where: { user_id: userId },
+      include: CartItem
+    });
+
+    if (cart) {
+      res.json({ cart });
+    } else {
+      res.status(404).json({ error: 'Cart not found for the specified user' });
     }
   } catch (err) {
-    console.error('Error validating user:', err.message);
-    return res.status(500).json({ error: 'Failed to validate user' });
-  }
-
-  const userCart = carts.find(cart => cart.user_id === userId);
-
-  if (userCart) {
-    res.json({ cart: userCart });
-  } else {
-    res.status(404).json({ error: 'Cart not found for the specified user' });
+    console.error('Error fetching cart:', err.message);
+    res.status(500).json({ error: 'Failed to fetch cart' });
   }
 });
 
+// Add an item to a user's cart
 app.post('/api/carts/:user_id/items', async (req, res) => {
   const userId = parseInt(req.params.user_id);
   const { product_id, quantity } = req.body;
 
-  // Validate user existence via User Service
   try {
-    const user = await communicator.getUserById(userId);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+    let cart = await Cart.findOne({ where: { user_id: userId } });
+
+    if (!cart) {
+      cart = await Cart.create({ user_id: userId });
     }
-  } catch (err) {
-    console.error('Error validating user:', err.message);
-    return res.status(500).json({ error: 'Failed to validate user' });
-  }
 
-  // Validate product existence via Product Service
-  try {
-    const product = await communicator.getProductById(product_id);
-    if (!product) {
-      return res.status(400).json({ error: 'Invalid product ID' });
+    const item = await CartItem.findOne({ where: { cart_id: cart.id, product_id } });
+
+    if (item) {
+      item.quantity += quantity;
+      await item.save();
+    } else {
+      await CartItem.create({ cart_id: cart.id, product_id, quantity });
     }
+
+    const updatedCart = await Cart.findOne({
+      where: { user_id: userId },
+      include: CartItem
+    });
+
+    res.status(201).json({ cart: updatedCart });
   } catch (err) {
-    console.error('Error validating product:', err.message);
-    return res.status(500).json({ error: 'Failed to validate product' });
+    console.error('Error adding item to cart:', err.message);
+    res.status(500).json({ error: 'Failed to add item to cart' });
   }
-
-  let userCart = carts.find(cart => cart.user_id === userId);
-
-  if (!userCart) {
-    userCart = { id: carts.length + 1, user_id: userId, items: [] };
-    carts.push(userCart);
-  }
-
-  const item = userCart.items.find(item => item.product_id === product_id);
-  if (item) {
-    item.quantity += quantity;
-  } else {
-    userCart.items.push({ id: userCart.items.length + 1, product_id, quantity });
-  }
-
-  res.status(201).json({ cart: userCart });
 });
 
+// Delete an item from a user's cart
 app.delete('/api/carts/:user_id/items/:item_id', async (req, res) => {
   const userId = parseInt(req.params.user_id);
   const itemId = parseInt(req.params.item_id);
 
-  // Validate user existence via User Service
   try {
-    const user = await communicator.getUserById(userId);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+    const cart = await Cart.findOne({ where: { user_id: userId } });
+
+    if (!cart) {
+      return res.status(404).json({ error: 'Cart not found for the specified user' });
     }
+
+    const item = await CartItem.findOne({ where: { id: itemId, cart_id: cart.id } });
+
+    if (!item) {
+      return res.status(404).json({ error: 'Item not found in the cart' });
+    }
+
+    await item.destroy();
+
+    const updatedCart = await Cart.findOne({
+      where: { user_id: userId },
+      include: CartItem
+    });
+
+    res.json({ cart: updatedCart });
   } catch (err) {
-    console.error('Error validating user:', err.message);
-    return res.status(500).json({ error: 'Failed to validate user' });
-  }
-
-  const userCart = carts.find(cart => cart.user_id === userId);
-
-  if (userCart) {
-    userCart.items = userCart.items.filter(item => item.id !== itemId);
-    res.json({ cart: userCart });
-  } else {
-    res.status(404).json({ error: 'Cart not found for the specified user' });
+    console.error('Error deleting item from cart:', err.message);
+    res.status(500).json({ error: 'Failed to delete item from cart' });
   }
 });
 

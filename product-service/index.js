@@ -1,21 +1,16 @@
 const express = require('express');
-const communicator = require('../communicator/index'); // Update with correct path
+const { sequelize, Product } = require('../db.js');
+const communicator = require('../communicator/index');
 const app = express();
 const PORT = process.env.PORT || 3003;
 
 // Middleware to parse JSON requests
 app.use(express.json());
 
-// Mock database for products
-const products = [
-  { id: 1, name: 'Product A' },
-  { id: 2, name: 'Product B' },
-  { id: 3, name: 'Product C' }
-];
-
 // Get all products
 app.get('/api/products', async (req, res) => {
   try {
+    const products = await Product.findAll();
     res.json({ products });
   } catch (err) {
     console.error('Error fetching products:', err.message);
@@ -28,7 +23,7 @@ app.get('/api/products/:id', async (req, res) => {
   const productId = parseInt(req.params.id);
 
   try {
-    const product = products.find(product => product.id === productId);
+    const product = await Product.findByPk(productId);
 
     if (product) {
       res.json({ product });
@@ -50,15 +45,7 @@ app.post('/api/products', async (req, res) => {
   }
 
   try {
-    const newProduct = {
-      id: products.length + 1,
-      name
-    };
-    products.push(newProduct);
-
-    // Notify other services about the new product if needed
-    await communicator.notifyNewProduct(newProduct);
-
+    const newProduct = await Product.create({ name });
     res.status(201).json({ message: 'Product added successfully', product: newProduct });
   } catch (err) {
     console.error('Error adding product:', err.message);
@@ -72,7 +59,7 @@ app.put('/api/products/:id', async (req, res) => {
   const { name } = req.body;
 
   try {
-    const product = products.find(product => product.id === productId);
+    const product = await Product.findByPk(productId);
 
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
@@ -80,6 +67,7 @@ app.put('/api/products/:id', async (req, res) => {
 
     if (name) product.name = name;
 
+    await product.save();
     res.json({ message: 'Product updated successfully', product });
   } catch (err) {
     console.error('Error updating product:', err.message);
@@ -92,17 +80,13 @@ app.delete('/api/products/:id', async (req, res) => {
   const productId = parseInt(req.params.id);
 
   try {
-    const productIndex = products.findIndex(product => product.id === productId);
+    const product = await Product.findByPk(productId);
 
-    if (productIndex === -1) {
+    if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    const removedProduct = products.splice(productIndex, 1);
-
-    // Notify other services about the removed product if needed
-    await communicator.notifyProductRemoval(removedProduct);
-
+    await product.destroy();
     res.json({ message: 'Product deleted successfully' });
   } catch (err) {
     console.error('Error deleting product:', err.message);
