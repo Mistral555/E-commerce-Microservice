@@ -1,7 +1,7 @@
 const { Sequelize, DataTypes } = require("sequelize");
 
-const sequelize = new Sequelize("ecommerce", "ecommerce_user", "password", {
-  host: "postgres",
+const sequelize = new Sequelize("commerce", "commerce_user", "password", {
+  host: "localhost",
   dialect: "postgres",
   logging: console.log, 
 });

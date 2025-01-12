@@ -1,5 +1,5 @@
 const express = require('express');
-const { sequelize, Order, OrderProduct } = require('../db.js');
+const { sequelize, Order, OrderProduct } = require('../../db.js');
 const communicator = require('../communicator/index');
 const app = express();
 const PORT = process.env.PORT || 3004;

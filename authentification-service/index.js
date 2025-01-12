@@ -1,6 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
+const bcryptjs = require('bcryptjs');
 const { sequelize, User } = require('../db.js');
 const app = express();
 const PORT = process.env.PORT || 3006;
@@ -25,7 +25,7 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(409).json({ error: 'Username already exists' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcryptjs.hash(password, 10);
     const newUser = await User.create({ username, password: hashedPassword });
 
     res.status(201).json({ message: 'User registered successfully', user: { id: newUser.id, username: newUser.username } });
@@ -49,7 +49,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await bcryptjs.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid username or password' });
     }

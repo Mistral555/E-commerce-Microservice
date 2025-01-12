@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build:
+      context: ./api-gateway
+    ports:
+      - "8080:8080" # Port exposé
+    depends_on:
+      - authentification-service
+      - product-service
+
+  authentification-service:
+    build:
+      context: ./authentification-service
+    ports:
+      - "3001:3001" # Port exposé
+
+  cart-service:
+    build:
+      context: ./cart-service
+    ports:
+      - "3002:3002" # Port exposé
+
+  product-service:
+    build:
+      context: ./product-service
+    ports:
+      - "3003:3003" # Port exposé
+
+  order-service:
+    build:
+      context: ./order-service
+    ports:
+      - "3004:3004" # Port exposé
+
+  store-service:
+    build:
+      context: ./store-service
+    ports:
+      - "3005:3005" # Port exposé
+
+  user-service:
+    build:
+      context: ./user-service
+    ports:
+      - "3006:3006" # Port exposé
+
+ 
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: commerce
+      POSTGRES_USER: commerce_user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
