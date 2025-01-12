@@ -1,9 +1,9 @@
 const { Sequelize, DataTypes } = require("sequelize");
 
-const sequelize = new Sequelize("ecommerce", "ecommerce_user", "password", {
-  host: "postgres",
-  dialect: "postgres",
-  logging: console.log, 
+const sequelize = new Sequelize("ecommerce", "root", "", {
+  host: "localhost",
+  dialect: "mysql",
+  logging: console.log,
 });
 
 async function connectWithRetry() {
@@ -69,5 +69,17 @@ const OrderProduct = sequelize.define("OrderProduct", {
   product_id: { type: DataTypes.INTEGER, references: { model: Product, key: "id" } },
   quantity: DataTypes.INTEGER,
 });
+
+async function syncDatabase() {
+  try {
+    await sequelize.sync({ force: false }); // force: true recréera les tables à chaque exécution (attention aux données).
+    console.log("Base de données synchronisée avec succès !");
+  } catch (error) {
+    console.error("Erreur lors de la synchronisation de la base de données :", error);
+  }
+}
+
+syncDatabase();
+
 
 module.exports = { sequelize, User, Product, Store, StoreProduct, Cart, CartItem, Order, OrderProduct };
