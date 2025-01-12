@@ -27,22 +27,25 @@ const services = {
 };
 
 // Proxy Requests to Microservices
-Object.entries(services).forEach(([serviceName, serviceUrl]) => {
-    app.use((req, res, next) => {
-        console.log(`Incoming request: ${req.method} ${req.url}`);
-        next();
-      });
-  app.use(
-    `/api/${serviceName}`,
-    createProxyMiddleware({
-      target: serviceUrl,
-      changeOrigin: true,
-     // pathRewrite: { [`^/api/${serviceName}`]: '' }, // Remove the base path
-    })
-  );
-});
+// Object.entries(services).forEach(([serviceName, serviceUrl]) => {
+//     app.use((req, res, next) => {
+//         console.log(`Incoming request: ${req.method} ${req.url}`);
+//         next();
+//       });
+//   app.use(
+//     `/api/${serviceName}`,
+//     createProxyMiddleware({
+//       target: serviceUrl,
+//       changeOrigin: true,
+//      // pathRewrite: { [`^/api/${serviceName}`]: '' }, // Remove the base path
+//     })
+//   );
+// });
 
-
+app.get('/api/users', createProxyMiddleware({
+  target: 'http://localhost:3001', // URL du service d'authentification
+  changeOrigin: true,
+}));
 
 // Health Check Route
 app.get('/api/health', (req, res) => {
