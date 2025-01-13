@@ -1,0 +1,142 @@
+
+services:
+  api-gateway:
+    build:
+      context: ./api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    networks:
+      - ecommerce
+    depends_on:
+      - db
+
+  authentification-service:
+    build:
+      context: ./authentification-service
+    ports:
+      - "3006:3006"
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=ecommerce
+    networks:
+      - ecommerce
+    depends_on:
+      - db
+
+  cart-service:
+    build:
+      context: ./cart-service
+    ports:
+      - "3005:3005"
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=ecommerce
+    networks:
+      - ecommerce
+    depends_on:
+      - db
+
+  order-service:
+    build:
+      context: ./order-service
+    ports:
+      - "3004:3004"
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=ecommerce
+    networks:
+      - ecommerce
+    depends_on:
+      - db
+
+  product-service:
+    build:
+      context: ./product-service
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=ecommerce
+    networks:
+      - ecommerce
+    depends_on: 
+      - db
+
+  store-service:
+    build:
+      context: ./store-service
+    ports:
+      - "3002:3002"
+    networks:
+      - ecommerce
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=ecommerce
+    depends_on: 
+      - db
+
+  user-service:
+    build:
+      context: ./user-service
+    ports:
+      - "3001:3001"
+    networks:
+      - ecommerce
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=ecommerce
+    depends_on: 
+      - db
+
+
+  front-service:
+    build:
+      context: ./Front_end
+    networks:
+      - ecommerce
+    ports:
+      - "3007:80"
+    environment:
+      - NODE_ENV=development
+
+  db:
+    image: mysql:8.0
+    container_name: mysql_db
+    ports:
+      - "3306:3306"
+    networks:
+      - ecommerce
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_USER: root
+      MYSQL_DATABASE: ecommerce
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:
+
+
+networks:
+  ecommerce:
+    driver: bridge

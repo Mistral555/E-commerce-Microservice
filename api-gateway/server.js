@@ -9,12 +9,12 @@ const port = process.env.PORT || 3000;
 
 // Définir les URLs des services
 const SERVICES = {
-  products: "http://localhost:3003/api/products",
-  orders: "http://localhost:3004/api/orders",
-  users: "http://localhost:3001/api/users",
-  stores: "http://localhost:3002/api/stores",
-  carts: "http://localhost:3005/api/carts",
-  auth: "http://localhost:3006/api/auth",
+  products: "http://product-service:3003/api/products",
+  orders: "http://order-service:3004/api/orders",
+  users: "http://user-service:3001/api/users",
+  stores: "http://store-service:3002/api/stores",
+  carts: "http://cart-service:3005/api/carts",
+  auth: "http://auth-service:3006/api/auth",
 };
 
 // Middleware global
