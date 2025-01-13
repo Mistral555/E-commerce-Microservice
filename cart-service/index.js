@@ -19,17 +19,19 @@ app.get('/api/carts/:user_id', async (req, res) => {
   try {
     const cart = await Cart.findOne({
       where: { user_id: userId },
-      include: CartItem
     });
 
     if (cart) {
-      res.json({ cart });
+      const items = await CartItem.findAll({
+        where: { cart_id: cart.id }
+      });
+      res.json({ items });
     } else {
       res.status(404).json({ error: 'Cart not found for the specified user' });
     }
   } catch (err) {
     console.error('Error fetching cart:', err.message);
-    res.status(500).json({ error: 'Failed to fetch cart' });
+    res.status(500).json({ err });
   }
 });
 
@@ -50,19 +52,21 @@ app.post('/api/carts/:user_id/items', async (req, res) => {
     if (item) {
       item.quantity += quantity;
       await item.save();
+      res.status(201).json({ item });
     } else {
-      await CartItem.create({ cart_id: cart.id, product_id, quantity });
+     const newItem= await CartItem.create({ cart_id: cart.id, product_id, quantity });
+      res.status(201).json({ newItem });
     }
 
-    const updatedCart = await Cart.findOne({
-      where: { user_id: userId },
-      include: CartItem
-    });
+    // const updatedCart = await Cart.findOne({
+    //   where: { user_id: userId },
+    //   include: CartItem
+    // });
 
-    res.status(201).json({ cart: updatedCart });
+   // res.status(201).json({ cart: updatedCart });
   } catch (err) {
     console.error('Error adding item to cart:', err.message);
-    res.status(500).json({ error: 'Failed to add item to cart' });
+    res.status(500).json({ err });
   }
 });
 
@@ -97,6 +101,29 @@ app.delete('/api/carts/:user_id/items/:item_id', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete item from cart' });
   }
 });
+
+// Vider le panier d'un utilisateur
+app.delete('/api/carts/:user_id/items', async (req, res) => {
+  const userId = parseInt(req.params.user_id);
+
+  try {
+    // Récupérer le panier de l'utilisateur
+    const cart = await Cart.findOne({ where: { user_id: userId } });
+
+    if (!cart) {
+      return res.status(404).json({ error: 'Cart not found for the specified user' });
+    }
+
+    // Supprimer tous les articles du panier
+    await CartItem.destroy({ where: { cart_id: cart.id } });
+
+    res.status(200).json({ message: 'Cart emptied successfully' });
+  } catch (err) {
+    console.error('Error emptying cart:', err.message);
+    res.status(500).json({ error: 'Failed to empty cart' });
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`Cart Service is running on port ${PORT}`);
