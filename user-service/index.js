@@ -2,7 +2,12 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const communicator = require('../communicator/index');
 const { sequelize, User, Product } = require('../db.js');
+const cors = require('cors'); 
+
+
 const app = express();
+app.use(cors());
+
 const PORT = process.env.PORT || 3001;
 
 // Middleware to parse JSON requests

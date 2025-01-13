@@ -2,6 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const app = express();
+
+const cors = require('cors'); 
+
+app.use(cors());cd 
 const PORT = process.env.PORT || 3000;
 
 // Middleware to parse JSON requests

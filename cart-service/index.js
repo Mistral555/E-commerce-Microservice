@@ -1,7 +1,13 @@
 const express = require('express');
 const { sequelize, Cart, CartItem } = require('../db.js');
 const communicator = require('../communicator/index');
+
+const cors = require('cors'); 
+
+
 const app = express();
+
+app.use(cors());
 const PORT = process.env.PORT || 3005;
 
 app.use(express.json());
