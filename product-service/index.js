@@ -1,6 +1,6 @@
 const express = require('express');
-const { sequelize, Product } = require('../db.js');
-const communicator = require('../communicator/index');
+const { sequelize, Product } = require('./db.js');
+const communicator = require('./communicator/index');
 const cors = require('cors'); 
 
 const app = express();
@@ -41,14 +41,14 @@ app.get('/api/products/:id', async (req, res) => {
 
 // Add a new product
 app.post('/api/products', async (req, res) => {
-  const { name } = req.body;
+  const { name, price, quantity } = req.body;
 
   if (!name) {
     return res.status(400).json({ error: 'Name is required' });
   }
 
   try {
-    const newProduct = await Product.create({ name });
+    const newProduct = await Product.create({ name, price, quantity });
     res.status(201).json({ message: 'Product added successfully', product: newProduct });
   } catch (err) {
     console.error('Error adding product:', err.message);

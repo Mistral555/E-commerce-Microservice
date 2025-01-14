@@ -1,7 +1,7 @@
 const express = require('express');
-const bcrypt = require('bcrypt');
-const communicator = require('../communicator/index');
-const { sequelize, User, Product } = require('../db.js');
+const bcryptjs = require('bcryptjs');
+const communicator = require('./communicator/index');
+const { sequelize, User, Product } = require('./db.js');
 const cors = require('cors'); 
 
 
@@ -48,7 +48,7 @@ app.post('/api/users', async (req, res) => {
   }
 
   try {
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcryptjs.hash(password, 10);
     const newUser = await User.create({ name, email, password: hashedPassword });
     res.status(201).json({ message: 'User added successfully', user: { id: newUser.id, name: newUser.name, email: newUser.email } });
   } catch (err) {
@@ -70,7 +70,7 @@ app.put('/api/users/:id', async (req, res) => {
 
     if (name) user.name = name;
     if (email) user.email = email;
-    if (password) user.password = await bcrypt.hash(password, 10);
+    if (password) user.password = await bcryptjs.hash(password, 10);
 
     await user.save();
     res.json({ message: 'User updated successfully', user: { id: user.id, name: user.name, email: user.email } });

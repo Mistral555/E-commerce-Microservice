@@ -1,6 +1,6 @@
 const users = [
-  { id: 1, name: 'John Doe', email: 'john.doe@example.com', password: bcrypt.hashSync('password123', 10) },
-  { id: 2, name: 'Jane Smith', email: 'jane.smith@example.com', password: bcrypt.hashSync('securepassword', 10) }
+  { id: 1, name: 'John Doe', email: 'john.doe@example.com', password: bcryptjs.hashSync('password123', 10) },
+  { id: 2, name: 'Jane Smith', email: 'jane.smith@example.com', password: bcryptjs.hashSync('securepassword', 10) }
 ];
 
 const products = [

@@ -1,6 +1,6 @@
 const express = require('express');
-const { sequelize, Order, OrderProduct } = require('../db.js');
-const communicator = require('../communicator/index');
+const { sequelize, Order, OrderProduct } = require('./db.js');
+const communicator = require('./communicator/index');
 const cors = require('cors'); 
 
 
